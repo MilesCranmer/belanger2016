@@ -45,19 +45,26 @@ def Zk(a,k,omega):
 
 
 
+test_freq = 0.006
 ##(Function tests)
 #generate white noise
-noise = np.random.rand(5000)*10000
-signal = 1.0/40.5*np.random.randint(0,90,size=[1000]).astype(np.float)*5000
+noise = np.random.rand(1000)*10000
+#sinusoid signal
+source = np.random.rand(10000)*10000
+cut_num = np.cos(2*np.pi*test_freq*source)
+cut_position = np.percentile(cut_num, 95)
+stacked = np.dstack((source,cut_num))[0]
+signal = stacked[stacked[:,1]>cut_position][:,0]
+
 #combine
 recv = np.clip(np.concatenate((noise,signal)), 0, 10000)
 
-freqs = np.arange(1e-3,1e-2,step=1e-5)
+freqs = np.arange(1e-5,0.008,step=1e-5)
 omegas = 2*np.pi*freqs
-Rks = []
+Zks = []
 for omega in omegas:
-	Rks.append(Zk(recv,3,omega))
+	Zks.append(Zk(recv,1,omega))
 
 import matplotlib.pyplot as plt
-plt.plot(Rks)
+plt.plot(freqs,Zks)
 plt.show()
