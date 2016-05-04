@@ -51,13 +51,12 @@ noise = np.random.rand(5000)*10000
 signal = 1.0/40.5*np.random.randint(0,90,size=[1000]).astype(np.float)*5000
 #combine
 recv = np.clip(np.concatenate((noise,signal)), 0, 10000)
-print np.max(signal)
 
 freqs = np.arange(1e-3,1e-2,step=1e-5)
 omegas = 2*np.pi*freqs
 Rks = []
 for omega in omegas:
-	Rks.append(Zk(recv,10,omega))
+	Rks.append(Zk(recv,3,omega))
 
 import matplotlib.pyplot as plt
 plt.plot(Rks)
