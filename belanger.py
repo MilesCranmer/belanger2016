@@ -8,13 +8,13 @@ def expectedSk (k, omega, t1, t2):
 	return -1.0/k/omega/(t2-t1)*(np.cos(k*omega*t2)-np.cos(k*omega*t1))
 #formula 7
 def varCk (k, omega, t1, t2, N):
-	return 0.5/N*(1+0.5*(np.sin(2*k*omega*t2)-np.sin(2*k*omega*t1))/k/omega/(t2-t1))-expectedCk(k, omega, t1, t2)
+	return abs(0.5/N*(1+0.5*(np.sin(2*k*omega*t2)-np.sin(2*k*omega*t1))/k/omega/(t2-t1))-expectedCk(k, omega, t1, t2))
 #formula 8
 def varSk (k, omega, t1, t2, N):
-	return 0.5/N*(1-0.5*(np.sin(2*k*omega*t2)-np.sin(2*k*omega*t1))/k/omega/(t2-t1))-expectedSk(k, omega, t1, t2)
+	return abs(0.5/N*(1-0.5*(np.sin(2*k*omega*t2)-np.sin(2*k*omega*t1))/k/omega/(t2-t1))-expectedSk(k, omega, t1, t2))
 #formula 9
 def covarCkSk (k, omega, t1, t2, N):
-	return 0.5/k/omega/N/(t2-t1)*(np.power(np.sin(k*omega*t2),2)-np.power(np.sin(k*omega*t1),2))-expectedCk(k, omega, t1, t2)*expectedSk(k, omega, t1, t2)
+	return abs(0.5/k/omega/N/(t2-t1)*(np.power(np.sin(k*omega*t2),2)-np.power(np.sin(k*omega*t1),2))-expectedCk(k, omega, t1, t2)*expectedSk(k, omega, t1, t2))
 #formula 4a
 def Ck(a,k,omega):
 	return 1.0/a.size*np.cos(omega*k*a).sum()
