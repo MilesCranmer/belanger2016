@@ -1,70 +1,65 @@
 import numpy as np
-
 #formula 5
-def expectedCk (k, omega, t1, t2):
-	return 1.0/k/omega/(t2-t1)*(np.sin(k*omega*t2)-np.sin(k*omega*t1))
+def Ck(eventTimes,harmonic,omega):
+	return 1.0/eventTimes.size*np.cos(harmonic*eventTimes*omega).sum()
 #formula 6
-def expectedSk (k, omega, t1, t2):
-	return -1.0/k/omega/(t2-t1)*(np.cos(k*omega*t2)-np.cos(k*omega*t1))
+def Sk(eventTimes,harmonic,omega):
+	return 1.0/eventTimes.size*np.sin(harmonic*eventTimes*omega).sum()
 #formula 7
-def varCk (k, omega, t1, t2, N):
-	return abs(0.5/N*(1+0.5*(np.sin(2*k*omega*t2)-np.sin(2*k*omega*t1))/k/omega/(t2-t1))-expectedCk(k, omega, t1, t2))
+def expectedCk(harmonic,omega,minTime,maxTime):
+	return 1.0/harmonic/omega/(maxTime-minTime)* \
+			(np.sin(harmonic*omega*maxTime)- \
+			 np.sin(harmonic*omega*minTime))
 #formula 8
-def varSk (k, omega, t1, t2, N):
-	return abs(0.5/N*(1-0.5*(np.sin(2*k*omega*t2)-np.sin(2*k*omega*t1))/k/omega/(t2-t1))-expectedSk(k, omega, t1, t2))
+def expectedSk(harmonic,omega,minTime,maxTime):
+	return -1.0/harmonic/omega/(maxTime-minTime)* \
+			(np.cos(harmonic*omega*maxTime)- \
+			 np.cos(harmonic*omega*minTime))
 #formula 9
-def covarCkSk (k, omega, t1, t2, N):
-	return abs(0.5/k/omega/N/(t2-t1)*(np.power(np.sin(k*omega*t2),2)-np.power(np.sin(k*omega*t1),2))-expectedCk(k, omega, t1, t2)*expectedSk(k, omega, t1, t2))
+def varianceCk(eventTimes,harmonic,omega,minTime,maxTime):
+	return abs(0.5/eventTimes.size*(1.0+0.5/harmonic/(maxTime-minTime)*\
+			(np.sin(2*harmonic*omega*maxTime)-\
+				np.sin(2*harmonic*omega*minTime)))-\
+			Ck(eventTimes,harmonic,omega))
 #formula 4a
-def Ck(a,k,omega):
-	return 1.0/a.size*np.cos(omega*k*a).sum()
+def varianceSk(eventTimes,harmonic,omega,minTime,maxTime):
+	return abs(0.5/eventTimes.size*(1.0-0.5/harmonic/(maxTime-minTime)*\
+			(np.sin(2*harmonic*omega*maxTime)-\
+				np.sin(2*harmonic*omega*minTime)))-\
+			Sk(eventTimes,harmonic,omega))
 #formula 4b
-def Sk(a,k,omega):
-	return 1.0/a.size*np.sin(omega*k*a).sum()
+def covarianceCkSk(eventTimes,harmonic,omega,minTime,maxTime):
+	return abs(0.5/harmonic/omega/(maxTime-minTime)/eventTimes.size*\
+			(np.power(np.sin(harmonic*omega*maxTime),2)-\
+			 np.power(np.sin(harmonic*omega*minTime),2))-\
+			expectedCk(harmonic,omega,minTime,maxTime)*\
+			expectedCk(harmonic,omega,minTime,maxTime))
 #formula 3
-def Rk(a,k,omega):
-	t1 = np.min(a)
-	t2 = np.max(a)
-	N = a.size
-	q = np.array([Ck(a,k,omega)-expectedCk (k, omega, t1, t2),Sk(a,k,omega)-expectedSk (k, omega, t1, t2)])
-	co = covarCkSk(k,omega,t1,t2,N)
-	M = np.array([[varCk(k, omega, t1, t2, N),co],[co,varSk(k, omega, t1, t2, N)]])
-	return q.dot(np.linalg.inv(M)).dot(q.transpose())
-	#return 2*a.size*(np.power(Ck(a,k,omega),2.0)+np.power(Sk(a,k,omega),2.0))
+def modifiedRkSquared(eventTimes,harmonic,omega):
+	minTime = np.min(eventTimes)
+	maxTime = np.max(eventTimes)
+	rkVector = np.array([Ck(eventTimes,harmonic,omega)-\
+						expectedCk(harmonic,omega,minTime,maxTime),
+						Sk(eventTimes,harmonic,omega)-\
+						expectedSk(harmonic,omega,minTime,maxTime)])
+	varianceRemovalMatrix = \
+		np.array([
+			[varianceCk(eventTimes,harmonic,omega,minTime,maxTime),
+			covarianceCkSk(eventTimes,harmonic,omega,minTime,maxTime)],
+			[covarianceCkSk(eventTimes,harmonic,omega,minTime,maxTime),
+			varianceSk(eventTimes,harmonic,omega,minTime,maxTime)]])
 
-#formula 10
-def Zk(a,k,omega):
-	cumul = 0
-	for i in range(1,k+1):
-		cumul += Rk(a,i,omega)
-	return cumul
+	return abs(rkVector.dot(np.linalg.inv(varianceRemovalMatrix)).dot(rkVector.transpose()))
 
+dataFile = open('arrivaltimes.txt','r')
+signal = np.array([float(line) for line in dataFile.readlines()])
+freqs = np.arange(0.008,0.012,0.00003)
+omegas = freqs*np.pi*2
 
-
-
-
-
-
-test_freq = 0.006
-##(Function tests)
-#generate white noise
-noise = np.random.rand(1000)*10000
-#sinusoid signal
-source = np.random.rand(10000)*10000
-cut_num = np.cos(2*np.pi*test_freq*source)
-cut_position = np.percentile(cut_num, 95)
-stacked = np.dstack((source,cut_num))[0]
-signal = stacked[stacked[:,1]>cut_position][:,0]
-
-#combine
-recv = np.clip(np.concatenate((noise,signal)), 0, 10000)
-
-freqs = np.arange(1e-5,0.008,step=1e-5)
-omegas = 2*np.pi*freqs
-Zks = []
-for omega in omegas:
-	Zks.append(Zk(recv,1,omega))
+Rks = [sum([modifiedRkSquared(signal, n, omega) for n in range(1,2)]) \
+		for omega in omegas]
 
 import matplotlib.pyplot as plt
-plt.plot(freqs,Zks)
+
+plt.plot(freqs, Rks)
 plt.show()
