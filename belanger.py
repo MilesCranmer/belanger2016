@@ -48,18 +48,45 @@ def modifiedRkSquared(eventTimes,harmonic,omega):
 			covarianceCkSk(eventTimes,harmonic,omega,minTime,maxTime)],
 			[covarianceCkSk(eventTimes,harmonic,omega,minTime,maxTime),
 			varianceSk(eventTimes,harmonic,omega,minTime,maxTime)]])
+	return rkVector.dot(np.linalg.inv(varianceRemovalMatrix))\
+				.dot(rkVector.transpose())
+#formula 10
+def modifiedZnSquared(eventTimes,maxHarmonic,omega):
+	return 1.0/maxHarmonic*\
+			sum([modifiedRkSquared(eventTimes,harmonic, omega)
+					for harmonic in range(1,maxHarmonic+1)])
+#Jager et al. 2010, Jager et al. 1989
+def hTestBestHarmonic(eventTimes,maxHarmonic,omega):
+    eventPhases = np.mod(omega/2.0/np.pi*eventTimes,1.0)
+    allHarmonics = np.arange(1,maxHarmonic+1)
+    #allCks = np.array([Ck(eventTimes,harmonic,omega) \
+    #			for harmonic in allHarmonics])
+    #allSks = np.array([Sk(eventTimes,harmonic,omega) \
+    #			for harmonic in allHarmonics])
+    cs = np.sum(
+    	np.exp(2.j*np.pi*np.arange(1,maxHarmonic+1)*eventPhases[:,None]),
+    			axis=0)/eventTimes.size
+    Zm2 = 2*eventTimes.size*np.cumsum(np.abs(cs)**2)
+    Zm22 = np.cumsum([modifiedRkSquared(eventTimes,harmonic,omega)
+    					for harmonic in range(1,maxHarmonic+1)])
+    candidateHarmonics = 4+Zm22-4*np.arange(1,maxHarmonic+1)
+    bestNumberOfHarmonics = np.argmax(candidateHarmonics)+1
+    return bestNumberOfHarmonics
 
-	return abs(rkVector.dot(np.linalg.inv(varianceRemovalMatrix)).dot(rkVector.transpose()))
-
-dataFile = open('arrivaltimes.txt','r')
-signal = np.array([float(line) for line in dataFile.readlines()])
-freqs = np.arange(0.008,0.012,0.00003)
+#test code
+dataFile = open('../../Dropbox/arrivaltimes.txt','r')
+signal = np.array([float(line)*86400 for line in dataFile.readlines()])
+freqs = np.arange(0.0005,0.0012,0.000003)
 omegas = freqs*np.pi*2
+bestHarmonic = hTestBestHarmonic(signal, 5,0.003)
+print bestHarmonic
 
-Rks = [sum([modifiedRkSquared(signal, n, omega) for n in range(1,2)]) \
+"""
+Rks = [sum([modifiedRkSquared(signal, n, omega) for n in range(1,4)]) \
 		for omega in omegas]
 
 import matplotlib.pyplot as plt
 
 plt.plot(freqs, Rks)
 plt.show()
+"""
